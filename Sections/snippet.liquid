@@ -1,0 +1,34 @@
+<ul class="grid grid--uniform{% if collection.products_count > 0 %} grid--view-items{% endif %}">
+        {% for product in collection.products %}
+          {% if product.options_by_name['Color'] %}
+			{% for product_option in product.options_with_values %}
+   			  {% if product_option.name == 'Color' %}
+        
+        		{% assign index = forloop.index0 %}
+   				{% assign color = '' %}
+        		{% assign used_colors = '' %}
+   				{% for variant in product.variants %}
+   				  {% capture color %}
+   					{{ variant.options[index] }}
+   				  {% endcapture %}
+
+                  {% unless used_colors contains color %}
+                    <li class="grid__item grid__item--{{section.id}} {{ grid_item_width }}">
+                      {% include 'product-card-grid-custom', max_height: max_height, product: product, show_vendor: section.settings.show_vendor %}
+                    </li>
+                    {% capture buffer %}
+                      {{used_colors | append: color | append: " " }}
+                    {% endcapture %}
+                    {% assign used_colors = buffer %}
+                  {% endunless %}
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+        {% else %}
+        	<li class="grid__item grid__item--{{section.id}} {{ grid_item_width }}">
+              {% include 'product-card-grid', max_height: max_height, product: product, show_vendor: section.settings.show_vendor %}
+             </li>
+          {%endif %}
+        {% endfor %}
+      
+      </ul>
