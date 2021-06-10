@@ -12,7 +12,7 @@ If you do not have a Shopify sandbox account, you can create a trial Shopify sto
 ## Implementation
 There are few simple steps to make:
 1. open the editor and search for collection-template.liquid
-2. replace the code where you loop through products and show them (lines 140-177) with the [snippet](Section/snippet.liquid)
+2. replace the code where you loop through products and show them (lines 140-177) with the [snippet](Sections/snippet.liquid)
 3. create 'product-card-grid-custom.liquid' in the 'Snippets' 
 4. replace the assigned value to the preview_image with varinat.image (line 18)
 5. add to the showed info {{ color }} in the line 45
