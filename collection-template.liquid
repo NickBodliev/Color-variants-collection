@@ -1,0 +1,538 @@
+{% if collection.url.size == 0 %}
+  {% assign collection_url = routes.all_products_collection_url %}
+{% else %}
+  {% assign collection_url = collection.url %}
+{% endif %}
+
+<div data-section-type="collection-template"
+     data-collection-url="{{ collection_url }}"
+    data-tag-groups-enabled="{% if section.settings.tag_filtering == "tag_groups" %}true{% else %}false{% endif %}"
+     class="{% if section.settings.show_collection_image and collection.image %}header-overlap-section{% endif %}" data-cc-animate>
+
+  {% paginate collection.products by section.settings.products_per_page %}
+    {% if section.settings.show_collection_image and collection.image %}
+      <div class="collection-header image-overlay image-overlay--bg-full needs-alt-logo">
+        <div class="rimage-outer-wrapper rimage-background lazyload fade-in"
+             data-cc-animate="cc-fade-in-zoom-out"
+             data-bgset="{% render 'bgset', image: collection.image %}"
+             data-sizes="auto"
+             data-parent-fit="cover">
+          <noscript>
+            <div class="rimage-wrapper" style="padding-top:{{ 1 | divided_by: collection.image.aspect_ratio | times: 100 }}%">
+              <img src="{{ collection.image | img_url: '1024x1024' }}" alt="{{ collection.image.alt | escape }}" class="rimage__image">
+            </div>
+          </noscript>
+        </div>
+
+        <div class="overlay-type overlay" data-cc-animate="cc-fade-in-zoom-out">
+          <div class="overlay__content">
+    {% endif %}
+
+    <div class="central">
+      <div class="content transparent">
+        {% if collection.description != blank %}
+          <h1 class="line-1 feature-header" data-cc-animate>{{ collection.title }}</h1>
+
+          {% if section.settings.description_position == "top" %}
+            <div class="line-2 rte" data-cc-animate data-cc-animate-delay="0.2s">
+              {{ collection.description }}
+            </div>
+          {% endif %}
+        {% else %}
+          <h1 class="line-1 feature-header no-margin" data-cc-animate>{{ collection.title }}</h1>
+        {% endif %}
+
+      </div>
+    </div>
+
+    {% if section.settings.show_collection_image and collection.image %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {%- unless collection.url contains "/vendors" or collection.url contains "/types" -%}
+      {% if section.settings.tag_filtering != "tag_groups" %}
+        <div class="filter">
+
+          {% if section.settings.tag_filtering == "simple" %}
+            {% assign show_tag_filter = false %}
+            {% capture tag_filter_html %}
+              <span class="option" data-cc-animate data-cc-animate-delay="0.4s">
+                <label for="filter-by">{{ 'collections.filtering.filter' | t }}</label>
+                <select id="filter-by" class="redirecter">
+                  <option value="{{ collection_url }}">{{ 'collections.filtering.all' | t }}</option>
+                  {% for tag in collection.all_tags %}
+                    {% unless tag contains 'meta-' %}
+                      {%- assign lowercase_tag = tag | downcase -%}
+                      {%- assign tagExistsIgnoreCase = false -%}
+
+                      {%- if current_tags contains tag %}
+                        {%- assign tagExists = true -%}
+                      {%- else -%}
+                        {%- assign tagExists = false -%}
+                      {%- endif -%}
+
+                      {%- if tagExists == false -%}
+                        {%- comment -%}Check if the tag exists case-insensitive{%- endcomment -%}
+
+                        {%- for this_tag in current_tags -%}
+                          {%- assign this_tag_lowercase = this_tag | downcase -%}
+                          {%- if this_tag_lowercase == lowercase_tag -%}
+                            {%- assign tagExistsIgnoreCase = true -%}
+                            {%- break -%}
+                          {%- endif -%}
+                        {%- endfor -%}
+                      {%- endif -%}
+
+                      <option value="{{ collection_url }}/{{ tag | handle }}"
+                              {% if tagExists or tagExistsIgnoreCase %}selected{% endif %}>{{ tag }}</option>
+                    {% assign show_tag_filter = true %}
+                    {% endunless %}
+                  {% endfor %}
+                </select>
+              </span>
+            {% endcapture %}
+            {% if show_tag_filter %}{{ tag_filter_html }}{% endif %}
+          {% endif %}
+
+          {% if section.settings.enable_sorting %}
+          <span class="option" data-cc-animate data-cc-animate-delay="0.5s">
+            <label for="sort-by">{{ 'collections.sorting.title' | t }}</label>
+            <select id="sort-by" data-initval="{{ collection.sort_by | default: collection.default_sort_by  }}">
+              {% if section.settings.show_featured_in_sort %}<option value="manual">{{ 'collections.sorting.featured' | t }}</option>{% endif %}
+              <option value="price-ascending">{{ 'collections.sorting.price_ascending' | t }}</option>
+              <option value="price-descending">{{ 'collections.sorting.price_descending' | t }}</option>
+              <option value="title-ascending">{{ 'collections.sorting.az' | t }}</option>
+              <option value="title-descending">{{ 'collections.sorting.za' | t }}</option>
+              <option value="created-descending">{{ 'collections.sorting.date_descending' | t }}</option>
+              <option value="created-ascending">{{ 'collections.sorting.date_ascending' | t }}</option>
+              <option value="best-selling">{{ 'collections.sorting.best_selling' | t }}</option>
+            </select>
+          </span>
+          {% endif %}
+        </div>
+      {% endif %}
+    {%- endunless -%}
+
+    <div data-cc-animate data-cc-animate-delay="0.7s">
+      <div class="wide-container half-gutter {% if section.settings.tag_filtering == "tag_groups" %}cc-product-filter-container{% endif %}" >
+        {%- unless collection.url contains "/vendors" or collection.url contains "/types" -%}
+          {% if section.settings.tag_filtering == "tag_groups" %}
+            <div class="footer-button-xs">
+              <button class="button no-hover" data-show-collection-filter
+                data-close-text="{{ 'collections.filtering.mobile_close' | t }}"
+                data-open-text="{{ 'collections.filtering.mobile_reveal' | t }}"
+                data-result-count-text="{{ 'collections.filtering.show_results' | t }}"
+                data-result-count-text-singular="{{ 'collections.filtering.show_results_singular' | t }}">
+                {{ 'collections.filtering.mobile_reveal' | t }}
+              </button>
+            </div>
+
+            <div class="cc-product-filter">
+              {% comment %} Which tags should we show, and group them into categories {% endcomment %}
+              {%- assign array_delimeter = ":::" -%}
+              {%- assign array_delimeter_title = "::" -%}
+              {%- assign swatch_csv = "" -%}
+
+              {%- capture filter_html -%}
+                {% for block in section.blocks %}
+                  {%- assign custom_tag_arr = block.settings.tagfilt_custom_tags | replace: ', ',',' | split: ',' -%}
+                  {%- assign tagfilt_custom_name_lowercase = block.settings.tagfilt_custom_name | downcase -%}
+                  {%- assign swatch_option_name_lowercase = settings.swatch_option_name | downcase -%}
+
+                  {%- capture this_filter_html -%}
+                    {%- for tag in custom_tag_arr -%}
+
+                      {%- unless tag contains 'meta-' -%}
+                        {%- if collection.all_tags contains tag -%}
+
+                          {%- assign actualTag = tag -%}
+                          {%- assign lowercase_tag = tag | downcase -%}
+
+                          {%- assign tagExistsIgnoreCase = false -%}
+
+                          {%- if current_tags contains tag %}
+                            {%- assign tagExists = true -%}
+                          {%- else -%}
+                            {%- assign tagExists = false -%}
+                          {%- endif -%}
+
+                          {%- if tagExists == false -%}
+                            {%- comment -%}Check if the tag exists case-insenstive{%- endcomment -%}
+
+                            {%- for this_tag in current_tags -%}
+                              {%- assign this_tag_lowercase = this_tag | downcase | replace: '&amp;', '' | handleize  -%}
+                              {%- assign lowercase_tag_handleized = lowercase_tag | handleize -%}
+
+                              {%- if this_tag_lowercase == lowercase_tag_handleized -%}
+                                {%- comment -%}Tag does exists case-insensitive, assign actualTag to be the actual case-sensitive tag{%- endcomment -%}
+                                {%- assign actualTag = this_tag -%}
+                                {%- assign tagExistsIgnoreCase = true -%}
+                                {%- break -%}
+                              {%- endif -%}
+                            {%- endfor -%}
+                          {%- endif -%}
+                          {%- assign actual_tag_handleized = actualTag | handleize -%}
+                          <li {% if tagExists or tagExistsIgnoreCase %}class="active"{% endif %}
+                              data-tag="{{ actual_tag_handleized | handleize }}">
+                            <button class="not-a-button" {% if settings.swatch_enabled and tagfilt_custom_name_lowercase == swatch_option_name_lowercase %}title="{{ actualTag | escape }}"{% endif %}>{{ actualTag }}</button>
+                          </li>
+                          {%- if tagfilt_custom_name_lowercase == swatch_option_name_lowercase -%}
+                            {%- assign swatch_csv = swatch_csv | append: ',' | append: actual_tag_handleized -%}
+                          {%- endif -%}
+                        {%- endif -%}
+                      {%- endunless -%}
+                    {%- endfor -%}
+                  {%- endcapture -%}
+
+                  {% assign this_filter_html = this_filter_html | strip %}
+                  {%- if this_filter_html != blank -%}
+                    {{ block.settings.tagfilt_custom_name }}{{ array_delimeter_title }}
+
+                    <ul {% if settings.swatch_enabled and tagfilt_custom_name_lowercase == swatch_option_name_lowercase %}class="cc-swatches"{% endif %}>
+                      {{ this_filter_html }}
+                    </ul>
+                    {%- if forloop.last == false -%}{{ array_delimeter }}{%- endif -%}
+
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endcapture -%}
+
+              {%- if settings.swatch_enabled and settings.swatch_images and swatch_csv != blank -%}
+                {%- assign swatch_array = swatch_csv | split: ',' -%}
+                <style>
+                  {% for swatch_value in swatch_array %}
+                    {% if swatch_value != blank %}
+                      .cc-swatches [data-tag="{{ swatch_value }}"] button:before {
+                          background-image: url({{ swatch_value | append: '.png' | file_img_url: '48x48', crop: 'center' }});
+                      }
+                    {% endif %}
+                  {% endfor %}
+                </style>
+              {%- endif -%}
+
+              {%- if section.settings.enable_sorting -%}
+                {%- assign sort_by_title = 'collections.sorting.title' | t -%}
+
+                {%- capture sort_by_html -%}
+                  {%- assign current_sort_by = collection.sort_by | default: collection.default_sort_by -%}
+                  <ul class="cc-product-filter__sort-by">
+                    {% if section.settings.show_featured_in_sort %}
+                      <li data-sort="manual" {% if current_sort_by == "manual" %}class="active"{% endif %}>
+                        <button class="not-a-button">{{ 'collections.sorting.featured' | t }}</button>
+                      </li>
+                    {% endif %}
+                    <li data-sort="price-ascending" {% if current_sort_by == "price-ascending" %}class="active"{% endif %}>
+                      <button class="not-a-button">{{ 'collections.sorting.price_ascending' | t }}</button>
+                    </li>
+                    <li data-sort="price-descending" {% if current_sort_by == "price-descending" %}class="active"{% endif %}>
+                      <button class="not-a-button">{{ 'collections.sorting.price_descending' | t }}</button>
+                    </li>
+                    <li data-sort="title-ascending" {% if current_sort_by == "title-ascending" %}class="active"{% endif %}>
+                      <button class="not-a-button">{{ 'collections.sorting.az' | t }}</button>
+                    </li>
+                    <li data-sort="title-descending" {% if current_sort_by == "title-descending" %}class="active"{% endif %}>
+                      <button class="not-a-button">{{ 'collections.sorting.za' | t }}</button>
+                    </li>
+                    <li data-sort="created-descending" {% if current_sort_by == "created-descending" %}class="active"{% endif %}>
+                      <button class="not-a-button">{{ 'collections.sorting.date_descending' | t }}</button>
+                    </li>
+                    <li data-sort="created-ascending" {% if current_sort_by == "created-ascending" %}class="active"{% endif %}>
+                      <button class="not-a-button">{{ 'collections.sorting.date_ascending' | t }}</button>
+                    </li>
+                    <li data-sort="best-selling" {% if current_sort_by == "best-selling" %}class="active"{% endif %}>
+                      <button class="not-a-button">{{ 'collections.sorting.best_selling' | t }}</button>
+                    </li>
+                  </ul>
+                {%- endcapture -%}
+              {% endif %}
+
+              {%- assign filter_html_arr = filter_html | split: array_delimeter -%}
+              {%- assign tab1_title = filter_html_arr[0] | split: array_delimeter_title | first -%}
+              {%- assign tab1_content = filter_html_arr[0] | split: array_delimeter_title | last -%}
+              {%- assign tab2_title = filter_html_arr[1] | split: array_delimeter_title | first -%}
+              {%- assign tab2_content = filter_html_arr[1] | split: array_delimeter_title | last -%}
+              {%- assign tab3_title = filter_html_arr[2] | split: array_delimeter_title | first -%}
+              {%- assign tab3_content = filter_html_arr[2] | split: array_delimeter_title | last -%}
+              {%- assign tab4_title = filter_html_arr[3] | split: array_delimeter_title | first -%}
+              {%- assign tab4_content = filter_html_arr[3] | split: array_delimeter_title | last -%}
+              {%- assign tab5_title = filter_html_arr[4] | split: array_delimeter_title | first -%}
+              {%- assign tab5_content = filter_html_arr[4] | split: array_delimeter_title | last -%}
+              {%- assign tab6_title = filter_html_arr[5] | split: array_delimeter_title | first -%}
+              {%- assign tab6_content = filter_html_arr[5] | split: array_delimeter_title | last -%}
+              {%- assign tab7_title = filter_html_arr[6] | split: array_delimeter_title | first -%}
+              {%- assign tab7_content = filter_html_arr[6] | split: array_delimeter_title | last -%}
+
+              {%
+                render "tabs",
+                display_type: "accordion",
+                show_reviews: false,
+                allow_multi_open: true,
+                tab1_title: tab1_title,
+                tab1_content: tab1_content,
+                tab2_title: tab2_title,
+                tab2_content: tab2_content,
+                tab3_title: tab3_title,
+                tab3_content: tab3_content,
+                tab4_title: tab4_title,
+                tab4_content: tab4_content,
+                tab5_title: tab5_title,
+                tab5_content: tab5_content,
+                tab6_title: tab6_title,
+                tab6_content: tab6_content,
+                tab7_title: tab7_title,
+                tab7_content: tab7_content,
+                tab8_title: sort_by_title,
+                tab8_content: sort_by_html
+              %}
+            </div>
+          {% endif %}
+        {% endunless %}
+
+        <div class="product-list-container {% if collection.url contains "/vendors" or collection.url contains "/types" %}no-filters{% endif %}">
+          <div class="product-list cf
+            product-list--{{ section.settings.layout }}
+            {% if section.settings.grid_mobile == '2' %}mob-two-col{% endif %}
+            {% if section.settings.layout == 'columns' %}jiggly-split dynamic-col-{{ section.settings.grid }}{% else %}grid--uniform{% endif %}"
+          data-result-count="{{ collection.products_count }}">
+
+            {% unless collection.products.size > 0 %}
+              <h3 class="align-centre no-results">{{ 'collections.general.no_matches' | t }}</h3>
+            {% endunless %}
+
+            {% if section.settings.layout == 'rows' %}
+              {% if section.settings.grid == 2 %}
+                {% assign product_class = 'column half' %}
+              {% elsif section.settings.grid == 3 %}
+                {% assign product_class = 'column third' %}
+              {% else %}
+                {% assign product_class = 'column quarter' %}
+              {% endif %}
+            {% endif %}
+
+            {% comment %} {% for product in collection.products %}
+              {% render 'product-block', product: product, product_class: product_class, i: forloop.index, show_vendor: section.settings.show_vendor %}
+            {% endfor %} {% endcomment %}
+            {% for product in collection.products %}
+              {% if product.options_by_name['Colore'] or product.options_by_name['Colore'] %}
+			          {% for product_option in product.options_with_values %}
+   			          {% if product_option.name == 'Colore' or product.options_by_name['Colore'] %}
+                    {% assign index = forloop.index0 %}
+                    {% assign color = '' %}
+                    {% assign used_colors = '' %}
+                    {% for variant in product.variants %}
+                      {% capture color %}
+                        {{ variant.options[index] }}
+   				            {% endcapture %}
+
+                      {% unless used_colors contains color %}
+                        {% render 'product-block', product: variant, product_class: product_class, i: forloop.index, show_vendor: section.settings.show_vendor %}
+                        {% comment %} <li class="grid__item grid__item--{{section.id}} {{ grid_item_width }}">
+                          {% include 'product-card-grid-custom', max_height: max_height, product: product, show_vendor: section.settings.show_vendor %}
+                        </li> {% endcomment %}
+                        {% capture buffer %}
+                          {{used_colors | append: color | append: " " }}
+                        {% endcapture %}
+                        {% assign used_colors = buffer %}
+                      {% endunless %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+        	      {% render 'product-block', product: product, product_class: product_class, i: forloop.index, show_vendor: section.settings.show_vendor %}
+              {%endif %}
+            {% endfor %}
+          </div>
+
+          {% comment %}
+            Infinite scroll option:
+
+            By default, more products will load in once you scroll to the bottom of the page.
+
+            Change 'false' to 'true' on the line below to prevent this from happening, and instead show a button at the bottom of the page.
+            Clicking this button will load in the next batch of products.
+          {% endcomment %}
+
+          {% assign show_scroll_button = false %}
+          {% if paginate.pages > 1 %}
+            <div class="pagination central small-gap-top content {% if section.settings.enable_infinite_scroll %}infiniscroll{% if show_scroll_button %} wait-for-trigger{% endif %}{% endif %}  transparent">
+              {{ paginate | default_pagination }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if collection.description != blank and section.settings.description_position == "bottom" %}
+        <div class="central footer">
+          <div class="content transparent">
+            <div class="rte">
+              {{ collection.description }}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endpaginate %}
+</div>
+
+
+{% schema %}
+  {
+    "name": "Collection pages",
+    "settings": [
+      {
+        "type": "header",
+        "content": "Header"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_collection_image",
+        "label": "Show collection image",
+        "default": true
+      },
+      {
+        "type": "select",
+        "id": "description_position",
+        "label": "Description position",
+        "options": [
+          {
+            "value": "top",
+            "label": "Top"
+          },
+          {
+            "value": "bottom",
+            "label": "Bottom"
+          }
+        ]
+      },
+      {
+        "type": "header",
+        "content": "GRID"
+      },
+      {
+        "type": "select",
+        "id": "layout",
+        "label": "Layout",
+        "options": [
+          {
+            "value": "columns",
+            "label": "Collage"
+          },
+          {
+            "value": "rows",
+            "label": "Grid"
+          }
+        ],
+        "default": "rows",
+        "info": "Collage will only work when the 'Image shape' is set to Natural - in Products / Image shape"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_vendor",
+        "label": "Show product vendor",
+        "default": false
+      },
+      {
+        "type": "range",
+        "id": "grid",
+        "label": "Desktop products per row",
+        "min": 2,
+        "max": 4,
+        "default": 3
+      },
+      {
+        "type": "select",
+        "id": "grid_mobile",
+        "label": "Mobile products per row",
+        "options": [
+          {
+            "value": "1",
+            "label": "1"
+          },
+          {
+            "value": "2",
+            "label": "2"
+          }
+        ],
+        "default": "2"
+      },
+      {
+        "type": "range",
+        "id": "products_per_page",
+        "label": "Products per page",
+        "min": 12,
+        "max": 48,
+        "step": 6,
+        "default": 18
+      },
+      {
+        "type": "checkbox",
+        "id": "enable_infinite_scroll",
+        "label": "Enable infinite-scroll",
+        "default": true,
+        "info": "As visitors scroll down, more products are loaded in automatically."
+      },
+      {
+        "type": "header",
+        "content": "FILTERS"
+      },
+      {
+        "type": "checkbox",
+        "id": "enable_sorting",
+        "label": "Enable sorting",
+        "default": true
+      },
+      {
+        "type": "checkbox",
+        "id": "show_featured_in_sort",
+        "label": "Show 'Featured' option in sorting dropdown",
+        "default": false
+      },
+      {
+        "type": "radio",
+        "id": "tag_filtering",
+        "label": "Tag filtering",
+        "default": "simple",
+        "options": [
+          {
+            "value": "none",
+            "label": "None"
+          },
+          {
+            "value": "simple",
+            "label": "Simple"
+          },
+          {
+            "value": "tag_groups",
+            "label": "Tag groups"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "Tag groups let you create custom filters for your collections [Learn more](https:\/\/cleancanvas.co.uk\/support\/general\/tag-groups)"
+      }
+    ],
+    "max_blocks": 7,
+    "blocks": [
+      {
+        "type": "tag",
+        "name": "Tag group",
+        "settings": [
+          {
+            "type": "text",
+            "id": "tagfilt_custom_name",
+            "label": "Label"
+          },
+          {
+            "type": "text",
+            "id": "tagfilt_custom_tags",
+            "label": "Tags to include",
+            "info": "Case-sensitive and separate with commas. Note, these are Tags associated to the product, not variant option names."
+          }
+        ]
+      }
+    ]
+  }
+{% endschema %}
